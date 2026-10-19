@@ -6,11 +6,12 @@
 <resources>
     <!-- Dock apps, left to right. Apps that aren't installed are skipped. -->
     <string-array name="dock_apps">
-        <item>com.apple.atve.androidtv.appletv</item>
-        <item>com.google.android.youtube.tv</item>
-        <item>in.startv.hotstar</item>
+        <item>org.smarttube.stable</item>
         <item>com.netflix.ninja</item>
+        <item>com.spotify.tv.android</item>
         <item>com.amazon.amazonvideo.livingroom</item>
+        <item>com.disney.disneyplus</item>
+        <item>ca.bellmedia.cravetv</item>
     </string-array>
 
     <!-- Never shown as tiles: system helpers, and the Live TV app (it's in the Inputs menu). -->
@@ -28,6 +29,21 @@
 
     <!-- The manufacturer's own source picker, used if switching to an input directly fails. -->
     <string name="input_picker_package" translatable="false">com.tcl.suspension</string>
+
+    <!-- Remote buttons to remap, "key=target". Needs Settings → Accessibility → Remote button remap on.
+         key: keycode number or name. target: a package, action:<intent action>, component:<pkg>/<class>
+         or tvinput:<TV input id>. TCL remote keycodes from logcat: 4065 YouTube, 4062 Netflix,
+         4099 Prime Video, 4001 Channel; Settings sends KEYCODE_NOTIFICATION, the person button
+         KEYCODE_PROFILE_SWITCH (both were handled by the now-disabled Google TV home). -->
+    <string-array name="key_remaps">
+        <item>4065=org.smarttube.stable</item>
+        <item>4062=com.netflix.ninja</item>
+        <item>4099=com.amazon.amazonvideo.livingroom</item>
+        <item>4001=tvinput:com.tcl.tvinput/.TunerInputService/HW2</item>
+        <item>KEYCODE_NOTIFICATION=action:android.settings.SETTINGS</item>
+        <item>KEYCODE_PROFILE_SWITCH=component:com.android.tv.settings/com.google.android.tv.settings.AccountActivity</item>
+    </string-array>
+    <string name="key_remap_description" translatable="false">Opens the app you chose when you press a remote button, such as SmartTube for the YouTube button. Only listens for those buttons.</string>
 
     <!-- Tiles per row in the grid. -->
     <integer name="columns">5</integer>

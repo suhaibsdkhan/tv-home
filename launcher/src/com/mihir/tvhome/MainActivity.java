@@ -136,10 +136,12 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        keepKeyRemapOn();
         IntentFilter tf = new IntentFilter(Intent.ACTION_TIME_TICK);
         tf.addAction(Intent.ACTION_TIME_CHANGED);
         tf.addAction(Intent.ACTION_TIMEZONE_CHANGED);
         tf.addAction(WifiManager.NETWORK_STATE_CHANGED_ACTION);
+        tf.addAction(android.net.ConnectivityManager.CONNECTIVITY_ACTION);
         registerReceiver(tick, tf);
         updateClock();
         updateWifi();
@@ -303,11 +305,13 @@ public class MainActivity extends Activity {
         right.setClipChildren(false);
         TextView inputs = pill("Inputs", "⇥");
         inputs.setOnClickListener(v -> showInputs(v));
+        TextView bluetooth = pill("Bluetooth", "ᛒ");
+        bluetooth.setOnClickListener(v -> launch(new Intent("com.android.tv.settings.ACCESSORIES_CONNECTED_DEVICES")));
         wifiPill = pill("Wi-Fi", "◉");
         wifiPill.setOnClickListener(v -> launch(new Intent(Settings.ACTION_WIFI_SETTINGS)));
         TextView settings = pill("Settings", "⚙");
         settings.setOnClickListener(v -> launch(new Intent(Settings.ACTION_SETTINGS)));
-        for (TextView p : new TextView[]{inputs, wifiPill, settings}) {
+        for (TextView p : new TextView[]{inputs, bluetooth, wifiPill, settings}) {
             right.addView(p, llp(-2, dp(30), dp(10), 0, 0, 0));
             pills.add(p);
         }
@@ -621,8 +625,30 @@ public class MainActivity extends Activity {
         date.setText(new SimpleDateFormat("EEEE  d MMMM", Locale.getDefault()).format(now.getTime()).toUpperCase(Locale.getDefault()));
     }
 
+    /**
+     * TCL blocks the service at boot unless APP_AUTO_START is allowed (build-and-install.sh); this is the backstop; turn "Remote button remap" back on. Needs
+     * WRITE_SECURE_SETTINGS, granted once over ADB (see build-and-install.sh); without it this does nothing.
+     */
+    private void keepKeyRemapOn() {
+        if (checkSelfPermission("android.permission.WRITE_SECURE_SETTINGS") != PackageManager.PERMISSION_GRANTED) return;
+        String me = new ComponentName(this, KeyRemapService.class).flattenToString();
+        String on = Settings.Secure.getString(getContentResolver(), Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES);
+        if (on == null || on.isEmpty()) on = me;
+        else if (!Arrays.asList(on.split(":")).contains(me)) on = on + ":" + me;
+        try {
+            Settings.Secure.putString(getContentResolver(), Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES, on);
+            Settings.Secure.putInt(getContentResolver(), Settings.Secure.ACCESSIBILITY_ENABLED, 1);
+        } catch (SecurityException ignored) { }
+    }
+
     private void updateWifi() {
         String name = "Wi-Fi";
+        android.net.ConnectivityManager cm = (android.net.ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
+        android.net.NetworkCapabilities caps = cm == null ? null : cm.getNetworkCapabilities(cm.getActiveNetwork());
+        if (caps != null && caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_ETHERNET)) {
+            wifiPill.setText("◉  Ethernet");
+            return;
+        }
         try {
             WifiManager wm = (WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE);
             if (wm != null && wm.getConnectionInfo() != null) {

@@ -1,0 +1,34 @@
+# TCL Google TV (device G10), Android 12, build STT2.230203.001
+# Apply: tools/disable.sh examples/tcl-google-tv-g10/debloat.txt   Undo: tools/restore.sh <same file>
+# Everything is DISABLED for user 0, never uninstalled.
+# Kept on request: AirPlay, Alexa (incl. com.tcl.ttvs, its bridge), Prime Video, SmartTube and other installed apps.
+
+# TCL accounts, ads and logging
+com.tcl.usercenter                 # TCL account / phone binding
+com.tcl.messagebox                 # TCL promo message popups
+com.tcl.esticker                   # on-screen promo stickers
+com.tcl.partnercustomizer          # partner app rows / promos for the stock launcher
+com.tcl.logkit                     # log collection / upload
+
+# TCL content tabs and channels
+# com.tcl.channelplus             # KEEP: TCL Channel feeds Live TV; disabling it leaves the Channel button on "Searching for signal"
+com.tcl.tv.tclhome_passive
+com.tcl.tv.plus                    # TCL TV+ free channels
+
+# TCL modes and clutter
+com.tcl.exhibit                    # store demo mode
+com.tcl.hotelmenu                  # hotel mode
+com.tcl.ocean.instructions         # e-manual
+com.tcl.repairguide
+com.tcl.ui_mediaCenter             # USB media player
+com.tcl.gamebar                    # game-mode overlay bar
+
+# Google extras
+com.google.android.apps.mediashell # Chromecast built-in
+com.google.android.apps.tv.dreamx  # ambient screensaver with recommendations (falls back to basic)
+com.google.android.videos          # Google TV / Play Movies
+com.google.android.play.games
+com.google.android.youtube.tvmusic
+com.google.android.youtube.tv     # YouTube; SmartTube handles youtube.com / youtu.be links instead
+com.google.android.feedback
+android.autoinstalls.config.google.gtvpai   # silently installs promoted apps

@@ -55,17 +55,25 @@ Undo everything with `tools/restore.sh <the same list>`.
 | [tools/find-tv.sh](tools/find-tv.sh) | Finds Android TVs on your Wi-Fi |
 | [tools/type.sh](tools/type.sh) | Type into the TV's on-screen keyboard from your laptop (`tools/type.sh` alone prompts hidden, for passwords) |
 | [tools/disable.sh](tools/disable.sh), [tools/restore.sh](tools/restore.sh) | Apply / undo a debloat list |
-| [examples/](examples/) | Debloat lists per TV model |
+| [examples/](examples/) | Debloat lists per TV model (plus a full restore script for the TCL G10) |
+| [tools/aerial-wallpapers.sh](tools/aerial-wallpapers.sh) | Optional: swap the wallpapers for stills from Apple TV's aerial screensaver (macOS, personal use) |
 
 ## The launcher
 
 - Clock, greeting and date top-left. Frosted pills top-right for **Inputs** (HDMI/AV/Live TV
-  dropdown; the remote's Menu key opens it too), **Wi-Fi** (shows the network name) and **Settings**.
+  dropdown; the remote's Menu key opens it too), **Bluetooth** (pair remotes, headphones, speakers),
+  **Wi-Fi** (shows the network name, or "Ethernet" when wired) and **Settings**.
 - A dock of your favourite apps. The focused app's name appears above it over a glow coloured from
   its banner. Press Down for every other app in a grid.
 - 12 nature photos crossfade every 10 minutes, with a scrim so text stays readable. Swap them in
   `launcher/assets/wallpapers/` (1920×1080 JPEGs, credits in `launcher/WALLPAPER-CREDITS.md`).
 - Deterministic D-pad focus, remembers the last tile, picks up newly installed apps on return.
+- **Remote button remap**: an optional accessibility service that makes the remote's app buttons
+  open what you want, e.g. the YouTube button opens SmartTube. Set `key_remaps` in `config.xml`
+  (`keycode=package`, `action:…`, `component:…` or `tvinput:<input id>`), then turn it on once in
+  Settings → Accessibility → Remote button remap. Find a button's keycode with
+  `tools/venv/bin/python -I tools/tv.py "logcat -c"`, press it, then
+  `tools/venv/bin/python -I tools/tv.py "logcat -d | grep handleKeyBeforeQueueing"`.
 
 Change the dock: edit `config.xml`, then run `launcher/build-and-install.sh`.
 
@@ -83,6 +91,18 @@ Change the dock: edit `config.xml`, then run `launcher/build-and-install.sh`.
   scripts run one per shell call.
 - **Apps installed from the Play Store didn't appear**, because the package broadcast was missed
   while another app was in front. The launcher re-checks with `getChangedPackages` on every return.
+- **The manufacturer's remote buttons stop working** once the app they're hard-wired to, or the
+  promo service that decides what they open, is disabled. On TCL the YouTube, Netflix, Prime Video
+  and Channel buttons go dead, and Settings / the profile button did nothing once the Google TV home
+  was gone. The remote button remap fixes all of them.
+- **TCL turns the remap off at every power cycle**: TCL's app-boot manager refuses to start
+  third-party services without its `APP_AUTO_START` app-op. The install script allows it, and the
+  launcher re-enables the service on start (it's granted `WRITE_SECURE_SETTINGS` over ADB).
+- **Live TV is stuck on "Searching for signal…"** if you disable `com.tcl.channelplus`: TCL's free
+  channels feed Live TV. Keep it.
+- **The TV can't be found** on apartment, office or guest Wi-Fi that isolates devices from each
+  other. Put the TV and computer on a phone hotspot for the setup; everything sticks when the TV
+  moves back. Uploads over a hotspot can time out mid-way: rerun, the APK's md5 is checked.
 - **Unsplash blocks scripted downloads** with a bot check. The wallpapers come from Wikimedia
   Commons Featured Pictures instead.
 
@@ -90,10 +110,10 @@ Change the dock: edit `config.xml`, then run `launcher/build-and-install.sh`.
 
 Android TV and Google TV: TCL, Xiaomi/Redmi, Hisense, Sony, OnePlus, Realme, Nvidia Shield,
 Chromecast with Google TV and most others. Not Samsung (Tizen), LG (webOS) or Fire TV.
-Tested on: TCL Google TV (Android 11). Add yours to `examples/`.
+Tested on: TCL Google TV G07 (Android 11) and G10 (Android 12). Add yours to `examples/`.
 
 ## Credits
 
-Inspired by [Gathin23/tv-vibehack](https://github.com/Gathin23/tv-vibehack). Wallpaper photos are
+Based on [mihirgupta0900/tv-home](https://github.com/mihirgupta0900/tv-home), inspired by [Gathin23/tv-vibehack](https://github.com/Gathin23/tv-vibehack). Wallpaper photos are
 from Wikimedia Commons under their own licences, see
 [launcher/WALLPAPER-CREDITS.md](launcher/WALLPAPER-CREDITS.md). Code is MIT, see [LICENSE](LICENSE).
