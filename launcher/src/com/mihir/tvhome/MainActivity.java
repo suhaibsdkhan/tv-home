@@ -84,9 +84,7 @@ public class MainActivity extends Activity {
     private LinearLayout content, dockRow;
     private FrameLayout hero;
     private LinearLayout grid;
-    private View glow;
-    private ImageView wallBack, wallFront;
-    private View gridShade;
+    private Backdrop backdrop;
     private String[] wallpapers = new String[0];
     private int wallIndex = -1;
     private long wallChangedAt;
@@ -95,7 +93,6 @@ public class MainActivity extends Activity {
     static final long WALLPAPER_INTERVAL_MS = 10 * 60 * 1000;
     private TextView greeting, clock, ampm, date, title, wifiPill, appsLabel;
     private int glowColor = 0xFF3A3A3A;
-    private ValueAnimator glowAnim;
     private int lastFocusedId = View.NO_ID;
     private boolean firstShow = true;
     private int packageSeq;
@@ -122,6 +119,7 @@ public class MainActivity extends Activity {
         liveTvPkg = getString(R.string.live_tv_package);
         inputPickerPkg = getString(R.string.input_picker_package);
         cols = getResources().getInteger(R.integer.columns);
+        getWindow().setBackgroundDrawable(null); // the root paints black; skip a second full-screen fill
         person = People.current(this);
         personIndex = People.currentIndex(this);
         getWindow().getDecorView().setSystemUiVisibility(
@@ -204,28 +202,12 @@ public class MainActivity extends Activity {
 
     private View buildUi() {
         FrameLayout root = new FrameLayout(this);
-        root.setBackgroundColor(Color.BLACK);
-
-        // Wallpaper: two stacked layers so a new photo can crossfade in over the old one.
-        wallBack = wallpaperLayer();
-        wallFront = wallpaperLayer();
-        root.addView(wallBack, new FrameLayout.LayoutParams(-1, -1));
-        root.addView(wallFront, new FrameLayout.LayoutParams(-1, -1));
-        // Scrim: darker at the top (clock, pills) and bottom (dock) so text stays readable.
-        View scrim = new View(this);
-        scrim.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-                new int[]{0xB3000000, 0x40000000, 0x26000000, 0x8C000000, 0xE6000000}));
-        root.addView(scrim, new FrameLayout.LayoutParams(-1, -1));
-        gridShade = new View(this);
-        gridShade.setBackgroundColor(0xB3000000);
-        gridShade.setAlpha(0f);
-        root.addView(gridShade, new FrameLayout.LayoutParams(-1, -1));
+        // Photo, scrim (darker at the top for the clock and pills, and at the bottom for the dock) and glow.
+        backdrop = new Backdrop(this, new int[]{0xB3000000, 0x40000000, 0x26000000, 0x8C000000, 0xE6000000});
+        root.addView(backdrop, new FrameLayout.LayoutParams(-1, -1));
         try {
             wallpapers = getAssets().list("wallpapers");
         } catch (java.io.IOException ignored) { }
-
-        glow = new View(this);
-        root.addView(glow, new FrameLayout.LayoutParams(-1, -1));
         setGlow(glowColor);
 
         scroll = new HomeScrollView(this);
@@ -255,7 +237,7 @@ public class MainActivity extends Activity {
         hero.addView(bottom, lp(-1, -2, Gravity.BOTTOM, dp(48), 0, dp(48), dp(30)));
 
         title = text(34, "sans-serif-light", Color.WHITE);
-        title.setShadowLayer(dp(18), 0, 0, 0x66000000);
+        title.setShadowLayer(dp(5), 0, 0, 0x66000000);
         title.setSingleLine(true);
         bottom.addView(title, new LinearLayout.LayoutParams(-2, -2));
         ((LinearLayout.LayoutParams) title.getLayoutParams()).setMargins(dp(8), 0, 0, dp(14));
@@ -312,7 +294,7 @@ public class MainActivity extends Activity {
         date.setPadding(0, 0, dp(16), 0); // letterSpacing is not counted in the measured width
         date.setLetterSpacing(0.22f);
         left.addView(date);
-        for (TextView t : new TextView[]{greeting, clock, ampm, date}) t.setShadowLayer(dp(10), 0, dp(1), 0xB3000000);
+        for (TextView t : new TextView[]{greeting, clock, ampm, date}) t.setShadowLayer(dp(4), 0, dp(1), 0xB3000000);
         header.addView(left, new FrameLayout.LayoutParams(dp(420), -2, Gravity.START | Gravity.TOP));
 
         LinearLayout right = new LinearLayout(this);
@@ -507,7 +489,7 @@ public class MainActivity extends Activity {
         });
         card.setOnFocusChangeListener((v, has) -> {
             float s = has ? (inDock ? 1.12f : 1.1f) : 1f;
-            v.animate().scaleX(s).scaleY(s).translationZ(has ? dp(14) : 0)
+            v.animate().scaleX(s).scaleY(s)
                     .setInterpolator(has ? new OvershootInterpolator(1.8f) : new DecelerateInterpolator())
                     .setDuration(has ? 320 : 200).start();
             shine.animate().alpha(has ? 1f : 0f).setDuration(160).start();
@@ -716,35 +698,20 @@ public class MainActivity extends Activity {
 
     private void setGlow(int color) {
         glowColor = color;
-        GradientDrawable g = new GradientDrawable();
-        g.setGradientType(GradientDrawable.RADIAL_GRADIENT);
-        g.setGradientCenter(0.5f, 0.78f);
-        g.setGradientRadius(getResources().getDisplayMetrics().widthPixels * 0.62f);
-        g.setColors(new int[]{withAlpha(color, 0.5f), withAlpha(color, 0.14f), Color.TRANSPARENT});
-        glow.setBackground(g);
+        backdrop.setGlow(color);
     }
 
     private void animateGlow(int to) {
-        if (glowAnim != null) glowAnim.cancel();
-        glowAnim = ValueAnimator.ofObject(new ArgbEvaluator(), glowColor, to);
-        glowAnim.setDuration(450);
-        glowAnim.addUpdateListener(a -> setGlow((int) a.getAnimatedValue()));
-        glowAnim.start();
+        // Redrawn once rather than animated: each background redraw is expensive on TV GPUs.
+        setGlow(to);
     }
 
     private void fadeGlow(float alpha) {
-        glow.animate().alpha(alpha).setDuration(300).start();
         // The grid sits over the photo's busiest middle part, so dim it while browsing apps.
-        gridShade.animate().alpha(alpha < 1f ? 1f : 0f).setDuration(300).start();
+        backdrop.setDim(alpha, alpha < 1f ? 1f : 0f);
     }
 
     // ---------------------------------------------------------------- wallpaper
-
-    private ImageView wallpaperLayer() {
-        ImageView v = new ImageView(this);
-        v.setScaleType(ImageView.ScaleType.CENTER_CROP);
-        return v;
-    }
 
     /** Decode the next photo off the main thread, then crossfade it in over the current one. */
     private void nextWallpaper() {
@@ -770,18 +737,7 @@ public class MainActivity extends Activity {
 
     private void showWallpaper(Bitmap bm) {
         if (bm == null || isDestroyed()) return;
-        // Swap roles: the old front becomes the back, the new photo fades in on top.
-        ImageView old = wallFront;
-        wallFront = wallBack;
-        wallBack = old;
-        ViewGroup root = (ViewGroup) wallFront.getParent();
-        root.removeView(wallFront);
-        root.addView(wallFront, 1, new FrameLayout.LayoutParams(-1, -1));
-        wallFront.setImageBitmap(bm);
-        wallFront.setAlpha(0f);
-        wallFront.animate().alpha(1f).setDuration(firstWallpaper ? 600 : 2000).withEndAction(() -> {
-            wallBack.setImageDrawable(null); // release the previous photo
-        }).start();
+        backdrop.setPhoto(bm, firstWallpaper ? 0 : 2000);
         firstWallpaper = false;
     }
 

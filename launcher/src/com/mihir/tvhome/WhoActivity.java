@@ -5,10 +5,8 @@ import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
-import android.graphics.Shader;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
-import android.os.Build;
 import android.os.Bundle;
 import android.util.TypedValue;
 import android.view.Gravity;
@@ -42,23 +40,13 @@ public class WhoActivity extends Activity {
                         | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY | View.SYSTEM_UI_FLAG_LAYOUT_STABLE);
 
         FrameLayout root = new FrameLayout(this);
-        root.setBackgroundColor(Color.BLACK);
 
-        ImageView wall = new ImageView(this);
-        wall.setScaleType(ImageView.ScaleType.CENTER_CROP);
-        wall.setImageBitmap(currentWallpaper());
-        if (Build.VERSION.SDK_INT >= 31) {
-            wall.setRenderEffect(android.graphics.RenderEffect.createBlurEffect(dp(40), dp(40), Shader.TileMode.CLAMP));
-        }
-        wall.setScaleX(1.08f);
-        wall.setScaleY(1.08f);
-        root.addView(wall, new FrameLayout.LayoutParams(-1, -1));
-
-        View frost = new View(this);
-        GradientDrawable shade = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-                new int[]{0x73000000, 0x59000000, 0x99000000});
-        frost.setBackground(shade);
+        // Frosted wallpaper on a 1080p surface: shrinking the photo to a thumbnail and letting the scale back
+        // up smooth it is a blur that costs nothing per frame (a live 4K blur stutters on TV GPUs).
+        Backdrop frost = new Backdrop(this, new int[]{0x73000000, 0x59000000, 0x99000000});
         root.addView(frost, new FrameLayout.LayoutParams(-1, -1));
+        Bitmap wall = currentWallpaper();
+        if (wall != null) frost.setPhoto(Bitmap.createScaledBitmap(wall, 64, 36, true), 0);
 
         LinearLayout column = new LinearLayout(this);
         column.setOrientation(LinearLayout.VERTICAL);
@@ -182,7 +170,7 @@ public class WhoActivity extends Activity {
             if (walls == null || walls.length == 0) return null;
             int i = getSharedPreferences("MainActivity", MODE_PRIVATE).getInt("wallpaper", 0);
             BitmapFactory.Options o = new BitmapFactory.Options();
-            o.inSampleSize = 4;
+            o.inSampleSize = 8;
             try (InputStream in = getAssets().open("wallpapers/" + walls[Math.max(0, i) % walls.length])) {
                 return BitmapFactory.decodeStream(in, null, o);
             }

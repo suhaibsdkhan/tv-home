@@ -23,7 +23,11 @@ case "${1:-}" in
         | awk -v u="$id" '{print "pm install-existing --user " u " " $1}'
       echo "pm install-existing --user $id com.netflix.ninja"
       [ -n "${3:-}" ] && grep -vE '^\s*(#|$)' "$3" | awk -v u="$id" '{print "pm disable-user --user " u " " $1}'
-      for p in com.google.android.youtube.tv com.google.android.apps.tv.launcherx com.google.android.tungsten.setupwraith; do
+      # Plus services the main user already runs once; a copy per profile costs ~30-60 MB each on a 2 GB TV
+      # (TCL telemetry, AirPlay, phone remote, Alexa, Assistant).
+      for p in com.google.android.youtube.tv com.google.android.apps.tv.launcherx com.google.android.tungsten.setupwraith \
+          com.tcl.ttvs com.realtek.airplay2 com.tcl.airplay2 com.google.android.tv.remote.service \
+          com.tcl.smartalexa com.google.android.katniss; do
         echo "pm disable-user --user $id $p"
       done
     } | "$PY" -I tools/tv.py --batch | grep -iE 'error|fail' || true

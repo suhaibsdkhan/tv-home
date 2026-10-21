@@ -117,6 +117,11 @@ Change the dock: edit `config.xml`, then run `launcher/build-and-install.sh`.
   `tools/profiles.sh wake`. Turning the TV off with the remote is standby and keeps them running.
 - **A force-stop (e.g. reinstalling) unbinds the remap service** without turning it off in Settings.
   The launcher notices and re-applies the setting so Android binds it again.
+- **The home screen ran at ~8 fps** on a 4K TCL: its GPU can't repaint a full-screen photo, scrim and
+  glow at 3840x2160 on every frame of a focus animation (~150 ms a frame; Settings, with a flat
+  background, ran fine). The background now lives on its own 1080p `SurfaceView`, redrawn only when
+  it changes and scaled by the display hardware: 17 ms a frame. Live blurs (`RenderEffect`) have the
+  same problem, so "Who's watching?" frosts a 64-pixel thumbnail instead.
 - **The TV can't be found** on apartment, office or guest Wi-Fi that isolates devices from each
   other. Put the TV and computer on a phone hotspot for the setup; everything sticks when the TV
   moves back. Uploads over a hotspot can time out mid-way: rerun, the APK's md5 is checked.
