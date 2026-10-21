@@ -35,18 +35,20 @@ public class WhoActivity extends Activity {
         super.onCreate(b);
         people = People.all(this);
         if (people.isEmpty()) { finish(); return; }
+        // Translucent, so content zoomed past its bounds still shows over the Backdrop surface (an opaque
+        // window hides everything outside its views' unzoomed bounds there).
+        getWindow().setFormat(android.graphics.PixelFormat.TRANSLUCENT);
         getWindow().getDecorView().setSystemUiVisibility(
                 View.SYSTEM_UI_FLAG_FULLSCREEN | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
                         | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY | View.SYSTEM_UI_FLAG_LAYOUT_STABLE);
 
-        FrameLayout root = new FrameLayout(this);
+        FrameLayout root = Backdrop.root(this);
 
-        // Frosted wallpaper on a 1080p surface: shrinking the photo to a thumbnail and letting the scale back
-        // up smooth it is a blur that costs nothing per frame (a live 4K blur stutters on TV GPUs).
+        // Frosted wallpaper on a 1080p surface, blurred once on a small copy (a live 4K blur stutters on TV GPUs).
         Backdrop frost = new Backdrop(this, new int[]{0x73000000, 0x59000000, 0x99000000});
         root.addView(frost, new FrameLayout.LayoutParams(-1, -1));
         Bitmap wall = currentWallpaper();
-        if (wall != null) frost.setPhoto(Bitmap.createScaledBitmap(wall, 64, 36, true), 0);
+        if (wall != null) frost.setPhoto(blur(Bitmap.createScaledBitmap(wall, 192, 108, true)), 0);
 
         LinearLayout column = new LinearLayout(this);
         column.setOrientation(LinearLayout.VERTICAL);
@@ -67,7 +69,7 @@ public class WhoActivity extends Activity {
         View focus = null;
         for (int i = 0; i < people.size(); i++) {
             View a = avatar(i, people.get(i));
-            row.addView(a, llp(-2, -2, dp(28), 0, dp(28), 0));
+            row.addView(a, llp(-2, -2, dp(12), 0, dp(12), 0));
             if (i == current || focus == null) focus = a.findViewWithTag("ring");
         }
         column.addView(row, llp(-2, -2, 0, 0, 0, 0));
@@ -87,6 +89,8 @@ public class WhoActivity extends Activity {
         box.setGravity(Gravity.CENTER_HORIZONTAL);
         box.setClipChildren(false);
         box.setClipToPadding(false);
+        // Room for the focused avatar's zoom, which would otherwise be cut off at the box's edges.
+        box.setPadding(dp(16), dp(12), dp(16), 0);
 
         FrameLayout ring = new FrameLayout(this);
         ring.setTag("ring");
@@ -163,6 +167,34 @@ public class WhoActivity extends Activity {
         pick(People.currentIndex(this));
     }
 
+    /** Three box-blur passes on a small bitmap: close to a Gaussian, smooth once scaled up. */
+    private static Bitmap blur(Bitmap src) {
+        int w = src.getWidth(), h = src.getHeight(), r = 6;
+        int[] px = new int[w * h], tmp = new int[w * h];
+        src.getPixels(px, 0, w, 0, 0, w, h);
+        for (int pass = 0; pass < 3; pass++) {
+            boxBlur(px, tmp, w, h, r, true);
+            boxBlur(tmp, px, w, h, r, false);
+        }
+        Bitmap out = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+        out.setPixels(px, 0, w, 0, 0, w, h);
+        return out;
+    }
+
+    private static void boxBlur(int[] in, int[] out, int w, int h, int r, boolean horizontal) {
+        int lines = horizontal ? h : w, len = horizontal ? w : h;
+        for (int l = 0; l < lines; l++) {
+            for (int i = 0; i < len; i++) {
+                int rs = 0, gs = 0, bs = 0, n = 0;
+                for (int k = Math.max(0, i - r); k <= Math.min(len - 1, i + r); k++) {
+                    int p = in[horizontal ? l * w + k : k * w + l];
+                    rs += (p >> 16) & 0xFF; gs += (p >> 8) & 0xFF; bs += p & 0xFF; n++;
+                }
+                out[horizontal ? l * w + i : i * w + l] = 0xFF000000 | (rs / n << 16) | (gs / n << 8) | (bs / n);
+            }
+        }
+    }
+
     /** The wallpaper the home screen is showing, downsampled (it gets blurred anyway). */
     private Bitmap currentWallpaper() {
         try {
@@ -182,7 +214,7 @@ public class WhoActivity extends Activity {
     private TextView text(float sp, String family, int color) {
         TextView t = new TextView(this);
         t.setTextSize(TypedValue.COMPLEX_UNIT_SP, sp);
-        t.setTypeface(Typeface.create(family, Typeface.NORMAL));
+        t.setTypeface(Fonts.get(this, family));
         t.setTextColor(color);
         return t;
     }

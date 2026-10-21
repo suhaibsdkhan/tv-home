@@ -138,4 +138,4 @@ Tested on: TCL Google TV G07 (Android 11) and G10 (Android 12). Add yours to `ex
 
 Based on [mihirgupta0900/tv-home](https://github.com/mihirgupta0900/tv-home), inspired by [Gathin23/tv-vibehack](https://github.com/Gathin23/tv-vibehack). Wallpaper photos are
 from Wikimedia Commons under their own licences, see
-[launcher/WALLPAPER-CREDITS.md](launcher/WALLPAPER-CREDITS.md). Code is MIT, see [LICENSE](LICENSE).
+[launcher/WALLPAPER-CREDITS.md](launcher/WALLPAPER-CREDITS.md). The font is [Inter](https://github.com/rsms/inter) (SIL Open Font License, [launcher/assets/fonts/OFL.txt](launcher/assets/fonts/OFL.txt)), an open stand-in for Apple's San Francisco, which is licensed for Apple devices only. Code is MIT, see [LICENSE](LICENSE).

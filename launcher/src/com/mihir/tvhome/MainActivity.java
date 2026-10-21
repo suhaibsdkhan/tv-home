@@ -119,7 +119,10 @@ public class MainActivity extends Activity {
         liveTvPkg = getString(R.string.live_tv_package);
         inputPickerPkg = getString(R.string.input_picker_package);
         cols = getResources().getInteger(R.integer.columns);
-        getWindow().setBackgroundDrawable(null); // the root paints black; skip a second full-screen fill
+        getWindow().setBackgroundDrawable(null); // the Backdrop paints the background
+        // Translucent, so content zoomed past its bounds still shows over the Backdrop surface (an opaque
+        // window hides everything outside its views' unzoomed bounds there).
+        getWindow().setFormat(android.graphics.PixelFormat.TRANSLUCENT);
         person = People.current(this);
         personIndex = People.currentIndex(this);
         getWindow().getDecorView().setSystemUiVisibility(
@@ -201,7 +204,7 @@ public class MainActivity extends Activity {
     // ---------------------------------------------------------------- layout
 
     private View buildUi() {
-        FrameLayout root = new FrameLayout(this);
+        FrameLayout root = Backdrop.root(this);
         // Photo, scrim (darker at the top for the clock and pills, and at the bottom for the dock) and glow.
         backdrop = new Backdrop(this, new int[]{0xB3000000, 0x40000000, 0x26000000, 0x8C000000, 0xE6000000});
         root.addView(backdrop, new FrameLayout.LayoutParams(-1, -1));
@@ -828,7 +831,7 @@ public class MainActivity extends Activity {
     private TextView text(float sp, String family, int color) {
         TextView t = new TextView(this);
         t.setTextSize(TypedValue.COMPLEX_UNIT_SP, sp);
-        t.setTypeface(Typeface.create(family, Typeface.NORMAL));
+        t.setTypeface(Fonts.get(this, family));
         t.setTextColor(color);
         return t;
     }

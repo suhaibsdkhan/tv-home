@@ -105,6 +105,19 @@ final class Backdrop extends SurfaceView implements SurfaceHolder.Callback {
         c.drawBitmap(b, new Rect(sx, sy, sx + sw, sy + sh), new Rect(0, 0, W, H), paint);
     }
 
+    /**
+     * A root layout for windows with a Backdrop behind them. Android trims a window over a SurfaceView to the
+     * views' unzoomed bounds, which cut off focus zooms at their edges; this keeps the whole window.
+     */
+    static android.widget.FrameLayout root(Context c) {
+        return new android.widget.FrameLayout(c) {
+            @Override public boolean gatherTransparentRegion(android.graphics.Region region) {
+                if (region != null) region.setEmpty();
+                return false;
+            }
+        };
+    }
+
     private static int withAlpha(int c, float a) {
         return (Math.round(Math.max(0f, Math.min(1f, a)) * 255) << 24) | (c & 0xFFFFFF);
     }
