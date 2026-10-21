@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android" xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="150dp" android:height="150dp" android:viewportWidth="100" android:viewportHeight="100">
+    <!-- Desert dunes -->
+    <path android:pathData="M0,0h100v100h-100z">
+        <aapt:attr name="android:fillColor"><gradient android:type="linear" android:startX="50" android:startY="0" android:endX="50" android:endY="70" android:startColor="#FF6DD5ED" android:endColor="#FFF7D59C"/></aapt:attr>
+    </path>
+    <path android:fillColor="#FFFFF6D5" android:pathData="M22,30a8,8 0,1 0,16,0a8,8 0,1 0,-16,0z"/>
+    <path android:fillColor="#FFF2A65A" android:pathData="M0,62Q30,46 58,60T100,56V100H0Z"/>
+    <path android:fillColor="#FFE07A5F" android:pathData="M0,76Q36,58 70,74T100,70V100H0Z"/>
+    <path android:fillColor="#FFC8553D" android:pathData="M0,88Q40,76 100,86V100H0Z"/>
+</vector>

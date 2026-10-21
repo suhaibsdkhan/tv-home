@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android" xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="150dp" android:height="150dp" android:viewportWidth="100" android:viewportHeight="100">
+    <!-- Mountain at dusk -->
+    <path android:pathData="M0,0h100v100h-100z">
+        <aapt:attr name="android:fillColor"><gradient android:type="linear" android:startX="50" android:startY="0" android:endX="50" android:endY="75" android:startColor="#FF1E3C72" android:endColor="#FFF6A57A"/></aapt:attr>
+    </path>
+    <path android:fillColor="#FFFFE8B0" android:fillAlpha="0.9" android:pathData="M60,36a9,9 0,1 0,18,0a9,9 0,1 0,-18,0z"/>
+    <path android:fillColor="#FF3B4A7A" android:pathData="M0,70L22,48L34,59L54,33L74,57L87,46L100,58V100H0Z"/>
+    <path android:fillColor="#FFF4F1EA" android:pathData="M54,33L47,42L51,41L54,44L58,40L61,42Z"/>
+    <path android:fillColor="#FF1B2547" android:pathData="M0,80Q25,66 50,78T100,74V100H0Z"/>
+</vector>

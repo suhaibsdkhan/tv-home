@@ -56,6 +56,7 @@ Undo everything with `tools/restore.sh <the same list>`.
 | [tools/type.sh](tools/type.sh) | Type into the TV's on-screen keyboard from your laptop (`tools/type.sh` alone prompts hidden, for passwords) |
 | [tools/disable.sh](tools/disable.sh), [tools/restore.sh](tools/restore.sh) | Apply / undo a debloat list |
 | [examples/](examples/) | Debloat lists per TV model (plus a full restore script for the TCL G10) |
+| [tools/profiles.sh](tools/profiles.sh) | Create, list, wake and remove the Google TV profiles behind "Who's watching?" |
 | [tools/aerial-wallpapers.sh](tools/aerial-wallpapers.sh) | Optional: swap the wallpapers for stills from Apple TV's aerial screensaver (macOS, personal use) |
 
 ## The launcher
@@ -68,6 +69,13 @@ Undo everything with `tools/restore.sh <the same list>`.
 - 12 nature photos crossfade every 10 minutes, with a scrim so text stays readable. Swap them in
   `launcher/assets/wallpapers/` (1920×1080 JPEGs, credits in `launcher/WALLPAPER-CREDITS.md`).
 - Deterministic D-pad focus, remembers the last tile, picks up newly installed apps on return.
+- **Who's watching?** (optional, Google TV on Android 12+): a frosted picker on power-on and wake,
+  with an illustrated avatar per person and a Guest. Each person other than the main user is a Google
+  TV profile with its own app data, so Netflix, Spotify, YouTube, Disney+… open in **their own
+  account**, and Guest's apps are signed out. Each person's dock fills with their most used apps.
+  Set up: `tools/profiles.sh add <name> <debloat list>` per person (and one for Guest), list them in
+  `launcher/local/values/people.xml` (git-ignored) as `Name|user id` / `Guest|id|guest`, rebuild.
+  Avatar photos: `launcher/local/drawable-nodpi/avatar_<name>.jpg`.
 - **Remote button remap**: an optional accessibility service that makes the remote's app buttons
   open what you want, e.g. the YouTube button opens SmartTube. Set `key_remaps` in `config.xml`
   (`keycode=package`, `action:…`, `component:…` or `tvinput:<input id>`), then turn it on once in
@@ -100,6 +108,15 @@ Change the dock: edit `config.xml`, then run `launcher/build-and-install.sh`.
   launcher re-enables the service on start (it's granted `WRITE_SECURE_SETTINGS` over ADB).
 - **Live TV is stuck on "Searching for signal…"** if you disable `com.tcl.channelplus`: TCL's free
   channels feed Live TV. Keep it.
+- **Per-person accounts need profiles, not just a picker**: apps keep one login per Android user, and
+  a home screen can't switch users. Google TV profiles are *profiles* (they run beside the main user),
+  and a launcher may open apps inside them with `LauncherApps`, but only apps with a phone-style
+  launcher entry. TV-only apps (Prime Video, Crave, Apple TV, Max) open the main user's copy, where
+  their own profile picker separates people, and are hidden from Guest.
+- **Profiles sleep after a full restart** (unplugged, update), and only ADB can start them:
+  `tools/profiles.sh wake`. Turning the TV off with the remote is standby and keeps them running.
+- **A force-stop (e.g. reinstalling) unbinds the remap service** without turning it off in Settings.
+  The launcher notices and re-applies the setting so Android binds it again.
 - **The TV can't be found** on apartment, office or guest Wi-Fi that isolates devices from each
   other. Put the TV and computer on a phone hotspot for the setup; everything sticks when the TV
   moves back. Uploads over a hotspot can time out mid-way: rerun, the APK's md5 is checked.

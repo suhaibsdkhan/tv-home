@@ -48,6 +48,14 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".WhoActivity"
+            android:exported="false"
+            android:launchMode="singleTask"
+            android:excludeFromRecents="true"
+            android:screenOrientation="landscape"
+            android:theme="@style/Home" />
+
         <service
             android:name=".KeyRemapService"
             android:label="Remote button remap"

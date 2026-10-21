@@ -41,9 +41,17 @@
         <item>4099=com.amazon.amazonvideo.livingroom</item>
         <item>4001=tvinput:com.tcl.tvinput/.TunerInputService/HW2</item>
         <item>KEYCODE_NOTIFICATION=action:android.settings.SETTINGS</item>
-        <item>KEYCODE_PROFILE_SWITCH=component:com.android.tv.settings/com.google.android.tv.settings.AccountActivity</item>
+        <item>KEYCODE_PROFILE_SWITCH=who</item>
     </string-array>
     <string name="key_remap_description" translatable="false">Opens the app you chose when you press a remote button, such as SmartTube for the YouTube button. Only listens for those buttons.</string>
+
+    <!-- People for "Who's watching?", as "Name|android user id" or "Name|user id|guest". Empty: no
+         picker. Each person other than the main user (0) is a Google TV profile with its own app logins;
+         create them with tools/profiles.sh. Put yours in launcher/local/values/people.xml (git-ignored),
+         which overrides this. Pictures: launcher/local/drawable-nodpi/avatar_<name>.jpg (square, ~400px),
+         otherwise the initial on a colour. -->
+    <string-array name="people">
+    </string-array>
 
     <!-- Tiles per row in the grid. -->
     <integer name="columns">5</integer>

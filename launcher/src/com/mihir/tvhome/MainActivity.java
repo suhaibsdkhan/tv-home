@@ -100,6 +100,9 @@ public class MainActivity extends Activity {
     private boolean firstShow = true;
     private int packageSeq;
     private PopupWindow inputsPopup;
+    private People.Person person;
+    private int personIndex = -1;
+    private TextView personPill;
 
     private final BroadcastReceiver tick = new BroadcastReceiver() {
         @Override public void onReceive(Context c, Intent i) { updateClock(); updateWifi(); }
@@ -119,6 +122,8 @@ public class MainActivity extends Activity {
         liveTvPkg = getString(R.string.live_tv_package);
         inputPickerPkg = getString(R.string.input_picker_package);
         cols = getResources().getInteger(R.integer.columns);
+        person = People.current(this);
+        personIndex = People.currentIndex(this);
         getWindow().getDecorView().setSystemUiVisibility(
                 View.SYSTEM_UI_FLAG_FULLSCREEN | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
                         | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY | View.SYSTEM_UI_FLAG_LAYOUT_STABLE);
@@ -137,6 +142,16 @@ public class MainActivity extends Activity {
     protected void onResume() {
         super.onResume();
         keepKeyRemapOn();
+        if (People.needsPick(this)) startActivity(People.whoIntent(this));
+        if (People.currentIndex(this) != personIndex) {
+            personIndex = People.currentIndex(this);
+            person = People.current(this);
+            if (personPill != null) personPill.setText("●  " + (person == null ? "" : person.name));
+            lastFocusedId = View.NO_ID;
+            buildApps();
+            // Land on this person's first app once the rebuilt dock is laid out.
+            handler.post(() -> { if (!dockCards.isEmpty()) dockCards.get(0).requestFocus(); });
+        }
         IntentFilter tf = new IntentFilter(Intent.ACTION_TIME_TICK);
         tf.addAction(Intent.ACTION_TIME_CHANGED);
         tf.addAction(Intent.ACTION_TIMEZONE_CHANGED);
@@ -311,7 +326,14 @@ public class MainActivity extends Activity {
         wifiPill.setOnClickListener(v -> launch(new Intent(Settings.ACTION_WIFI_SETTINGS)));
         TextView settings = pill("Settings", "⚙");
         settings.setOnClickListener(v -> launch(new Intent(Settings.ACTION_SETTINGS)));
-        for (TextView p : new TextView[]{inputs, bluetooth, wifiPill, settings}) {
+        List<TextView> row = new ArrayList<>(Arrays.asList(inputs, bluetooth, wifiPill, settings));
+        if (!People.all(this).isEmpty()) {
+            // Who's using the TV; opens "Who's watching?" to switch.
+            personPill = pill(person == null ? "" : person.name, "●");
+            personPill.setOnClickListener(v -> startActivity(People.whoIntent(this)));
+            row.add(personPill);
+        }
+        for (TextView p : row) {
             right.addView(p, llp(-2, dp(30), dp(10), 0, 0, 0));
             pills.add(p);
         }
@@ -352,6 +374,7 @@ public class MainActivity extends Activity {
         for (ResolveInfo ri : pm.queryIntentActivities(q, 0)) {
             ActivityInfo ai = ri.activityInfo;
             if (hidden.contains(ai.packageName) || byPkg.containsKey(ai.packageName)) continue;
+            if (People.availability(this, person, ai.packageName) == People.NONE) continue;
             App a = new App();
             a.pkg = ai.packageName;
             a.label = String.valueOf(ri.loadLabel(pm));
@@ -364,8 +387,19 @@ public class MainActivity extends Activity {
             byPkg.put(a.pkg, a);
         }
 
+        // Dock: this person's most used apps, topped up with the configured dock in its order.
+        List<App> used = new ArrayList<>();
+        for (App a : byPkg.values()) if (People.launches(this, person, a.pkg) > 0) used.add(a);
+        List<String> order = Arrays.asList(dockApps);
+        Collections.sort(used, (x, y) -> {
+            int c = People.launches(this, person, y.pkg) - People.launches(this, person, x.pkg);
+            if (c != 0) return c;
+            int ix = order.indexOf(x.pkg), iy = order.indexOf(y.pkg);
+            return (ix < 0 ? 99 : ix) - (iy < 0 ? 99 : iy);
+        });
         List<App> dock = new ArrayList<>();
-        for (String p : dockApps) if (byPkg.containsKey(p)) dock.add(byPkg.remove(p));
+        for (App a : used) if (dock.size() < dockApps.length) dock.add(byPkg.remove(a.pkg));
+        for (String p : dockApps) if (dock.size() < dockApps.length && byPkg.containsKey(p)) dock.add(byPkg.remove(p));
         List<App> rest = new ArrayList<>(byPkg.values());
         Collections.sort(rest, (x, y) -> x.label.compareToIgnoreCase(y.label));
 
@@ -462,10 +496,15 @@ public class MainActivity extends Activity {
         label.setAlpha(0f);
         if (!inDock) box.addView(label, llp(-1, -2, 0, dp(10), 0, 0));
 
-        card.setOnClickListener(v -> launch(new Intent(Intent.ACTION_MAIN)
-                .addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER)
-                .setComponent(app.component)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)));
+        card.setOnClickListener(v -> {
+            if (People.openInProfile(this, person, app.pkg)) return;
+            if (launch(new Intent(Intent.ACTION_MAIN)
+                    .addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER)
+                    .setComponent(app.component)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED))) {
+                People.countLaunch(this, person, app.pkg);
+            }
+        });
         card.setOnFocusChangeListener((v, has) -> {
             float s = has ? (inDock ? 1.12f : 1.1f) : 1f;
             v.animate().scaleX(s).scaleY(s).translationZ(has ? dp(14) : 0)
@@ -618,7 +657,9 @@ public class MainActivity extends Activity {
     private void updateClock() {
         Calendar now = Calendar.getInstance();
         int h = now.get(Calendar.HOUR_OF_DAY);
-        greeting.setText(h < 5 ? "GOOD NIGHT" : h < 12 ? "GOOD MORNING" : h < 17 ? "GOOD AFTERNOON" : "GOOD EVENING");
+        String hello = h < 5 ? "GOOD NIGHT" : h < 12 ? "GOOD MORNING" : h < 17 ? "GOOD AFTERNOON" : "GOOD EVENING";
+        if (person != null && !person.guest) hello += ", " + person.name.toUpperCase(Locale.getDefault());
+        greeting.setText(hello);
         boolean is24 = android.text.format.DateFormat.is24HourFormat(this);
         clock.setText(new SimpleDateFormat(is24 ? "H:mm" : "h:mm", Locale.getDefault()).format(now.getTime()));
         ampm.setText(is24 ? "" : (h < 12 ? "AM" : "PM"));
@@ -626,17 +667,28 @@ public class MainActivity extends Activity {
     }
 
     /**
-     * TCL blocks the service at boot unless APP_AUTO_START is allowed (build-and-install.sh); this is the backstop; turn "Remote button remap" back on. Needs
-     * WRITE_SECURE_SETTINGS, granted once over ADB (see build-and-install.sh); without it this does nothing.
+     * Keeps "Remote button remap" running: TCL blocks it at boot unless APP_AUTO_START is allowed, and a
+     * force-stop (e.g. an update) unbinds it. Needs WRITE_SECURE_SETTINGS, granted once over ADB (see
+     * build-and-install.sh); without it this does nothing.
      */
     private void keepKeyRemapOn() {
         if (checkSelfPermission("android.permission.WRITE_SECURE_SETTINGS") != PackageManager.PERMISSION_GRANTED) return;
         String me = new ComponentName(this, KeyRemapService.class).flattenToString();
+        // Already running? (Enabled in settings isn't enough: a force-stop, e.g. an update, unbinds it.)
+        android.view.accessibility.AccessibilityManager am =
+                (android.view.accessibility.AccessibilityManager) getSystemService(ACCESSIBILITY_SERVICE);
+        for (android.accessibilityservice.AccessibilityServiceInfo i
+                : am.getEnabledAccessibilityServiceList(android.accessibilityservice.AccessibilityServiceInfo.FEEDBACK_ALL_MASK)) {
+            if (me.equals(i.getId())) return;
+        }
         String on = Settings.Secure.getString(getContentResolver(), Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES);
-        if (on == null || on.isEmpty()) on = me;
-        else if (!Arrays.asList(on.split(":")).contains(me)) on = on + ":" + me;
+        List<String> others = new ArrayList<>();
+        if (on != null) for (String s : on.split(":")) if (!s.isEmpty() && !s.equals(me)) others.add(s);
         try {
-            Settings.Secure.putString(getContentResolver(), Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES, on);
+            // Write it without us, then with us, so Android binds the service again.
+            Settings.Secure.putString(getContentResolver(), Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES, String.join(":", others));
+            others.add(me);
+            Settings.Secure.putString(getContentResolver(), Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES, String.join(":", others));
             Settings.Secure.putInt(getContentResolver(), Settings.Secure.ACCESSIBILITY_ENABLED, 1);
         } catch (SecurityException ignored) { }
     }

@@ -19,4 +19,5 @@ if [ "${1:-}" = "--remove-launcher" ]; then
   tools/venv/bin/python -I tools/tv.py pm uninstall com.mihir.tvhome
 else
   echo "To give the remote's buttons back to TCL: Settings → Accessibility → Remote button remap → off."
+  echo "Who's watching profiles stay (and keep their logins): tools/profiles.sh list, tools/profiles.sh remove <id>."
 fi
